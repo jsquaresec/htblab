@@ -34,31 +34,48 @@ def decoded_flags(job):
         return []
 
 
-def interface_ipv4(name="tun0"):
+def interface_ipv4(name):
     """Return an interface IPv4 address from the host network namespace."""
     try:
         import fcntl
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        request = struct.pack("256s", name[:15].encode())
-        result = fcntl.ioctl(sock.fileno(), 0x8915, request)  # SIOCGIFADDR
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            request = struct.pack("256s", name[:15].encode())
+            result = fcntl.ioctl(sock.fileno(), 0x8915, request)  # SIOCGIFADDR
         return socket.inet_ntoa(result[20:24])
     except (ImportError, OSError):
         return None
 
 
+def htb_vpn_interface():
+    """Find the active host tunnel used for the HTB VPN."""
+    preferred = ("tun0", "tun1", "tap0", "wg0")
+    names = [name for _, name in socket.if_nameindex()]
+    ordered = list(preferred) + [
+        name for name in names
+        if name.startswith(("tun", "tap", "wg")) and name not in preferred
+    ]
+    for name in ordered:
+        if name not in names:
+            continue
+        ip = interface_ipv4(name)
+        if ip:
+            return name, ip
+    return None, None
+
+
 @tree.command(name="vpn", description="Show the current HTB VPN tunnel status")
 async def vpn(interaction: discord.Interaction):
-    vpn_ip = interface_ipv4("tun0")
+    interface, vpn_ip = htb_vpn_interface()
     if not vpn_ip:
         e = discord.Embed(
             title="HTB VPN",
-            description="❌ `tun0` is not connected or has no IPv4 address.",
+            description="❌ No active HTB VPN tunnel is visible to the bot.",
             color=0xED4245,
         )
     else:
         e = discord.Embed(title="HTB VPN", color=0x57F287)
         e.add_field(name="Status", value="Connected", inline=True)
-        e.add_field(name="Interface", value="`tun0`", inline=True)
+        e.add_field(name="Interface", value=f"`{interface}`", inline=True)
         e.add_field(name="VPN IP", value=f"`{vpn_ip}`", inline=False)
     await interaction.response.send_message(embed=e)
 
