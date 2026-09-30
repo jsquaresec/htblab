@@ -24,7 +24,13 @@ def _gobuster_wordlist():
     for path in candidates:
         if os.path.isfile(path):
             return path
-    raise RuntimeError("Gobuster wordlist missing from runner image")
+    
+    # Fallback: create minimal wordlist if packages missing
+    fallback = "/tmp/gobuster-common.txt"
+    if not os.path.isfile(fallback):
+        with open(fallback, 'w') as f:
+            f.write("admin\napi\nbackup\nconfig\ndev\nlogin\nrobots.txt\n")
+    return fallback
 
 
 ACTIONS = {
