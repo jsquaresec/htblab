@@ -52,7 +52,6 @@ ACTIONS = {
                            "-fw",
                            "--status-codes-blacklist", ""],
 },
-    },
     "nikto": {
         "tier": "enum", "desc": "Web server vulnerability scan",
         "build": lambda ip, ctx: ["nikto", "-h", ip,
