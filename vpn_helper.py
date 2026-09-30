@@ -59,7 +59,7 @@ def main():
 
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as server:
         server.bind(SOCKET_PATH)
-        os.chmod(SOCKET_PATH, 0o666)
+        os.chmod(SOCKET_PATH, 0o660)
         server.listen(8)
         while True:
             conn, _ = server.accept()
