@@ -45,21 +45,13 @@ ACTIONS = {
                                   "-oN", _scan(ctx["job_id"], "scripts"), ip],
     },
     "gobuster": {
-<<<<<<< HEAD
     "tier": "enum", "desc": "HTTP directory brute-force",
     "build": lambda ip, ctx: ["gobuster", "dir", "-u", f"http://{ip}",
                            "-w", _gobuster_wordlist(),
                            "-o", _scan(ctx["job_id"], "gobuster"),
                            "-fw",
                            "--status-codes-blacklist", ""],
-=======
-        "tier": "enum", "desc": "HTTP directory brute-force",
-        "build": lambda ip, ctx: ["gobuster", "dir", "-u", f"http://{ip}",
-                                  "-w", _gobuster_wordlist(),
-                                  "-o", _scan(ctx["job_id"], "gobuster"),
-				  "-fw",
-				  "--status-codes-blacklist", ""],
->>>>>>> 26c66a5 (gobuster: force wildcard scan, disable status blacklist)
+
     },
     "nikto": {
         "tier": "enum", "desc": "Web server vulnerability scan",
