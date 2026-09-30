@@ -27,6 +27,7 @@ def init():
 
 
 def create(job_id, ip, platform, notes=""):
+    job_id = job_id.strip().lower()
     now = int(time.time())
     with db() as c:
         c.execute(
@@ -37,12 +38,14 @@ def create(job_id, ip, platform, notes=""):
 
 
 def get(job_id):
+    job_id = job_id.strip().lower()
     with db() as c:
         row = c.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone()
     return dict(row) if row else None
 
 
 def update(job_id, **fields):
+    job_id = job_id.strip().lower()
     fields["updated"] = int(time.time())
     sets = ", ".join(f"{k}=?" for k in fields)
     with db() as c:
