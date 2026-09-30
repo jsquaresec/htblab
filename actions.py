@@ -6,11 +6,24 @@ approval is required. `flag_check` marks actions whose output may contain
 an actual flag (we never regex-scan unrelated tool output for flags).
 """
 from config import SCAN_DIR
+import os
 import re
 
 
 def _scan(job_id, name):
     return f"{SCAN_DIR}/{job_id}_{name}.txt"
+
+
+def _wordlist():
+    """Return the first packaged directory wordlist available in the runner."""
+    candidates = (
+        "/usr/share/wordlists/dirb/common.txt",
+        "/usr/share/dirb/wordlists/common.txt",
+    )
+    for path in candidates:
+        if os.path.isfile(path):
+            return path
+    return candidates[0]
 
 
 ACTIONS = {
@@ -27,7 +40,7 @@ ACTIONS = {
     "gobuster": {
         "tier": "enum", "desc": "HTTP directory brute-force",
         "build": lambda ip, ctx: ["gobuster", "dir", "-u", f"http://{ip}",
-                                  "-w", "/usr/share/wordlists/dirb/common.txt",
+                                  "-w", _wordlist(),
                                   "-o", _scan(ctx["job_id"], "gobuster")],
     },
     "nikto": {
