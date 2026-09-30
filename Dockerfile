@@ -9,6 +9,7 @@ RUN apt-get update \
         sshpass \
         python3 \
         dirb \
+        wordlists \
         ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
