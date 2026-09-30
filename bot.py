@@ -216,7 +216,10 @@ async def cancel(interaction: discord.Interaction, job_id: str):
         await interaction.response.send_message(embed=err("OPERATION ID NOT FOUND.", "OPERATION LOOKUP"))
         return
     jobs.update(job_id, status="cancelled")
-    await interaction.response.send_message(f"🛑 Job `{job_id}` cancelled.")
+    e = sec_embed("OPERATION TERMINATED", "**■ EXECUTION HALTED BY OPERATOR**", "red")
+    field(e, "Operation ID", f"`{job_id.upper()}`")
+    field(e, "State", "`CANCELLED`")
+    await interaction.response.send_message(embed=e)
 
 
 @tree.command(name="approve", description="Approve a pending exploit-tier action")
@@ -224,11 +227,14 @@ async def approve(interaction: discord.Interaction, job_id: str):
     j = jobs.get(job_id)
     if not j or j["status"] != "awaiting_approval":
         await interaction.response.send_message(
-            embed=err("That job is not waiting for approval.")
+            embed=err("OPERATION IS NOT AWAITING AUTHORIZATION.", "AUTHORIZATION CONTROL")
         )
         return
     jobs.update(job_id, status="approved")
-    await interaction.response.send_message(f"✅ Job `{job_id}` action approved.")
+    e = sec_embed("AUTHORIZATION GRANTED", "**◈ PRIVILEGED ACTION CLEARED**", "green")
+    field(e, "Operation ID", f"`{job_id.upper()}`")
+    field(e, "Decision", "`APPROVED`")
+    await interaction.response.send_message(embed=e)
 
 
 @tree.command(name="deny", description="Deny a pending exploit-tier action")
@@ -236,11 +242,14 @@ async def deny(interaction: discord.Interaction, job_id: str):
     j = jobs.get(job_id)
     if not j or j["status"] != "awaiting_approval":
         await interaction.response.send_message(
-            embed=err("That job is not waiting for approval.")
+            embed=err("OPERATION IS NOT AWAITING AUTHORIZATION.", "AUTHORIZATION CONTROL")
         )
         return
     jobs.update(job_id, status="denied")
-    await interaction.response.send_message(f"🚫 Job `{job_id}` action denied.")
+    e = sec_embed("AUTHORIZATION DENIED", "**■ PRIVILEGED ACTION BLOCKED**", "red")
+    field(e, "Operation ID", f"`{job_id.upper()}`")
+    field(e, "Decision", "`DENIED`")
+    await interaction.response.send_message(embed=e)
 
 
 @tree.command(name="results", description="Show flags and recent evidence")
@@ -253,11 +262,12 @@ async def results(interaction: discord.Interaction, job_id: str):
     evidence_tail = Evidence(job_id).tail(15)
     if len(evidence_tail) > 3500:
         evidence_tail = evidence_tail[-3500:]
-    e = discord.Embed(title=f"Results for `{job_id}`", color=0x57F287)
-    e.add_field(name="Status", value=j["status"], inline=False)
-    e.add_field(name="Flags", value=f"`{flags}`", inline=False)
+    e = sec_embed("OPERATION REPORT", f"`OPS::{job_id.upper()} // {status_label(j[\'status\'])}`", "green")
+    field(e, "Target", f"`{j[\'ip\']}`")
+    field(e, "Platform", f"`{j[\'platform\'].upper()}`")
+    field(e, "Recovered Artifacts", f"`{flags}`", False)
     e.add_field(
-        name="Evidence tail",
+        name="// EVIDENCE STREAM",
         value=f"```\n{evidence_tail}\n```",
         inline=False,
     )
