@@ -1,5 +1,6 @@
 """Discord front-end. Run on the host (or as the 'bot' compose service)."""
 import json
+import os
 import socket
 import struct
 import uuid
@@ -63,21 +64,82 @@ def htb_vpn_interface():
     return None, None
 
 
-@tree.command(name="vpn", description="Show the current HTB VPN tunnel status")
-async def vpn(interaction: discord.Interaction):
+VPN_CONTROL_SOCKET = os.getenv("VPN_CONTROL_SOCKET", "/run/htblab/vpn.sock")
+
+
+def vpn_control(action):
+    """Ask the host helper to perform one fixed OpenVPN service action."""
+    request = (json.dumps({"action": action}) + "\n").encode()
+    try:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+            sock.settimeout(12)
+            sock.connect(VPN_CONTROL_SOCKET)
+            sock.sendall(request)
+            response = b""
+            while b"\n" not in response and len(response) < 16384:
+                chunk = sock.recv(4096)
+                if not chunk:
+                    break
+                response += chunk
+        return json.loads(response.decode().strip())
+    except (OSError, json.JSONDecodeError) as exc:
+        return {"ok": False, "state": "unavailable", "message": str(exc)}
+
+
+def vpn_embed(action, result):
     interface, vpn_ip = htb_vpn_interface()
-    if not vpn_ip:
-        e = discord.Embed(
-            title="HTB VPN",
-            description="❌ No active HTB VPN tunnel is visible to the bot.",
-            color=0xED4245,
-        )
+    state = result.get("state", "unknown")
+    connected = bool(vpn_ip) and state == "active"
+    color = 0x57F287 if connected else (0xFEE75C if state in {"activating", "deactivating"} else 0xED4245)
+    icon = "🟢" if connected else ("🟡" if color == 0xFEE75C else "🔴")
+
+    e = discord.Embed(
+        title="J2Sec • HTB VPN",
+        description=f"{icon} **{state.replace('_', ' ').title()}**",
+        color=color,
+    )
+    e.add_field(name="Service", value=f"`{state}`", inline=True)
+    e.add_field(name="Interface", value=f"`{interface or '—'}`", inline=True)
+    e.add_field(name="VPN IP", value=f"`{vpn_ip or '—'}`", inline=True)
+    if action != "status":
+        e.add_field(name="Action", value=f"`{action}`", inline=True)
+    message = result.get("message")
+    if message and not result.get("ok"):
+        e.add_field(name="Details", value=message[:1000], inline=False)
+    e.set_footer(text="J2Sec's HTB Toolkit • Host-managed OpenVPN")
+    return e
+
+
+@tree.command(name="vpn", description="Manage the HTB VPN connection")
+@app_commands.describe(action="VPN action to perform")
+@app_commands.choices(action=[
+    app_commands.Choice(name="Status", value="status"),
+    app_commands.Choice(name="Start", value="start"),
+    app_commands.Choice(name="Stop", value="stop"),
+    app_commands.Choice(name="Restart", value="restart"),
+])
+async def vpn(
+    interaction: discord.Interaction,
+    action: app_commands.Choice[str] = None,
+):
+    selected = action.value if action else "status"
+
+    if selected != "status":
+        permissions = getattr(interaction.user, "guild_permissions", None)
+        if not permissions or not permissions.administrator:
+            await interaction.response.send_message(
+                embed=err("🔒 Administrator permission is required to change the HTB VPN."),
+                ephemeral=True,
+            )
+            return
+        await interaction.response.defer()
+
+    result = vpn_control(selected)
+    embed = vpn_embed(selected, result)
+    if selected == "status":
+        await interaction.response.send_message(embed=embed)
     else:
-        e = discord.Embed(title="HTB VPN", color=0x57F287)
-        e.add_field(name="Status", value="Connected", inline=True)
-        e.add_field(name="Interface", value=f"`{interface}`", inline=True)
-        e.add_field(name="VPN IP", value=f"`{vpn_ip}`", inline=False)
-    await interaction.response.send_message(embed=e)
+        await interaction.followup.send(embed=embed)
 
 
 @tree.command(name="htb", description="Queue an authorized HTB lab run")
@@ -197,6 +259,9 @@ async def list_jobs(interaction: discord.Interaction):
 @client.event
 async def on_ready():
     jobs.init()
+    await client.change_presence(
+        activity=discord.Game(name="J2Sec's HTB Toolkit")
+    )
     await tree.sync()
     print(f"Logged in as {client.user} — commands synced")
 
