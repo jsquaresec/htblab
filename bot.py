@@ -1,5 +1,7 @@
 """Discord front-end. Run on the host (or as the 'bot' compose service)."""
 import json
+import socket
+import struct
 import uuid
 
 import discord
@@ -30,6 +32,35 @@ def decoded_flags(job):
         return value if isinstance(value, list) else []
     except (TypeError, json.JSONDecodeError):
         return []
+
+
+def interface_ipv4(name="tun0"):
+    """Return an interface IPv4 address from the host network namespace."""
+    try:
+        import fcntl
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        request = struct.pack("256s", name[:15].encode())
+        result = fcntl.ioctl(sock.fileno(), 0x8915, request)  # SIOCGIFADDR
+        return socket.inet_ntoa(result[20:24])
+    except (ImportError, OSError):
+        return None
+
+
+@tree.command(name="vpn", description="Show the current HTB VPN tunnel status")
+async def vpn(interaction: discord.Interaction):
+    vpn_ip = interface_ipv4("tun0")
+    if not vpn_ip:
+        e = discord.Embed(
+            title="HTB VPN",
+            description="❌ `tun0` is not connected or has no IPv4 address.",
+            color=0xED4245,
+        )
+    else:
+        e = discord.Embed(title="HTB VPN", color=0x57F287)
+        e.add_field(name="Status", value="Connected", inline=True)
+        e.add_field(name="Interface", value="`tun0`", inline=True)
+        e.add_field(name="VPN IP", value=f"`{vpn_ip}`", inline=False)
+    await interaction.response.send_message(embed=e)
 
 
 @tree.command(name="htb", description="Queue an authorized HTB lab run")
