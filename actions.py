@@ -47,8 +47,10 @@ ACTIONS = {
     "gobuster": {
     "tier": "enum", "desc": "HTTP directory brute-force",
     "build": lambda ip, ctx: ["gobuster", "dir", "-u", f"http://{ip}",
-                               "-w", _gobuster_wordlist(),
-                               "-o", _scan(ctx["job_id"], "gobuster")],
+                           "-w", _gobuster_wordlist(),
+                           "-o", _scan(ctx["job_id"], "gobuster"),
+                           "-fw",
+                           "--status-codes-blacklist", ""],
 },
     },
     "nikto": {
