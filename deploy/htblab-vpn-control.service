@@ -1,0 +1,20 @@
+[Unit]
+Description=J2Sec HTB VPN control helper
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/htblab/vpn_helper.py
+Restart=on-failure
+RestartSec=2
+User=root
+Group=root
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/run/htblab
+
+[Install]
+WantedBy=multi-user.target
