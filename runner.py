@@ -17,7 +17,8 @@ def webhook(content=None, embed=None):
     payload = {"content": content, "embeds": [embed] if embed else []}
     req = urllib.request.Request(
         DISCORD_WEBHOOK, data=json.dumps(payload).encode(),
-        headers={"Content-Type": "application/json"})
+        headers={"Content-Type": "application/json",
+                 "User-Agent": "J2Sec-HTB-Runner/1.0"})
     try:
         urllib.request.urlopen(req, timeout=10)
     except Exception as e:
