@@ -256,9 +256,9 @@ async def results(interaction: discord.Interaction, job_id: str):
     evidence_tail = Evidence(job_id).tail(15)
     if len(evidence_tail) > 3500:
         evidence_tail = evidence_tail[-3500:]
-    e = sec_embed("OPERATION REPORT", f"`OPS::{job_id.upper()} // {status_label(j[\'status\'])}`", "green")
-    field(e, "Target", f"`{j[\'ip\']}`")
-    field(e, "Platform", f"`{j[\'platform\'].upper()}`")
+    e = sec_embed("OPERATION REPORT", f"`OPS::{job_id.upper()} // {status_label(j["status"])}`", "green")
+    field(e, "Target", f"`{j["ip"]}`")
+    field(e, "Platform", f"`{j["platform"].upper()}`")
     field(e, "Recovered Artifacts", f"`{flags}`", False)
     e.add_field(
         name="// EVIDENCE STREAM",
