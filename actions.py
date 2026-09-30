@@ -51,7 +51,7 @@ ACTIONS = {
                            "-o", _scan(ctx["job_id"], "gobuster"),
                            "-fw",
                            "--status-codes-blacklist", ""],
-},
+    },
     "nikto": {
         "tier": "enum", "desc": "Web server vulnerability scan",
         "build": lambda ip, ctx: ["nikto", "-h", ip,
