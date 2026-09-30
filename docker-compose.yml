@@ -2,6 +2,8 @@ services:
   bot:
     image: python:3.12-slim
     working_dir: /app
+    # Share the host network namespace so /vpn can inspect the current tun0 address.
+    network_mode: host
     volumes:
       - .:/app:ro
       - htb-data:/data
