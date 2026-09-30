@@ -7,6 +7,7 @@ services:
     volumes:
       - .:/app:ro
       - htb-data:/data
+      - /run/htblab:/run/htblab
     command: >
       sh -c "pip install --no-cache-dir -r requirements.txt &&
              python -u bot.py"
