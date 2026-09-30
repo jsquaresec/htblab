@@ -23,8 +23,26 @@ def allowed(target):
     )
 
 
-def err(msg):
-    return discord.Embed(description=msg, color=0xED4245)
+THEME = {"cyan": 0x00E5FF, "green": 0x00FF88, "amber": 0xFFB020, "red": 0xFF3B5C}
+
+
+def sec_embed(title, description="", color="cyan"):
+    e = discord.Embed(title=f"J2SEC // {title.upper()}", description=description, color=THEME[color])
+    e.set_footer(text="J2SEC SECURITY OPERATIONS // HTB TOOLKIT")
+    return e
+
+
+def field(e, label, value, inline=True):
+    e.add_field(name=f"// {label.upper()}", value=value, inline=inline)
+    return e
+
+
+def status_label(value):
+    return str(value or "unknown").replace("_", " ").upper()
+
+
+def err(msg, title="ACCESS / CONTROL ERROR"):
+    return sec_embed(title, f"```ansi\n[!] {msg}\n```", "red")
 
 
 def decoded_flags(job):
@@ -94,7 +112,7 @@ def vpn_embed(action, result):
     icon = "🟢" if connected else ("🟡" if color == 0xFEE75C else "🔴")
 
     e = discord.Embed(
-        title="J2Sec • HTB VPN",
+        title="J2SEC // HTB VPN // TUNNEL CONTROL",
         description=f"{icon} **{state.replace('_', ' ').title()}**",
         color=color,
     )
@@ -128,7 +146,7 @@ async def vpn(
         permissions = getattr(interaction.user, "guild_permissions", None)
         if not permissions or not permissions.administrator:
             await interaction.response.send_message(
-                embed=err("🔒 Administrator permission is required to change the HTB VPN."),
+                embed=err("ADMINISTRATOR CLEARANCE REQUIRED FOR VPN STATE CHANGES."),
                 ephemeral=True,
             )
             return
@@ -163,16 +181,18 @@ async def htb(
 ):
     if not allowed(ip):
         await interaction.response.send_message(
-            embed=err(f"❌ `{ip}` is not in the HTB allowlist. Refusing.")
+            embed=err(f"TARGET {ip} FAILED HTB RANGE VALIDATION.", "TARGET REJECTED")
         )
         return
     job_id = uuid.uuid4().hex[:8]
     jobs.create(job_id, ip, platform.value, notes)
-    e = discord.Embed(title="🚀 Job queued", color=0x5865F2)
-    e.add_field(name="Job ID", value=f"`{job_id}`")
-    e.add_field(name="Target", value=f"`{ip}` ({platform.value})")
+    e = sec_embed("TARGET ACQUISITION", "**◈ TARGET VALIDATED**\n`HTB RANGE VERIFIED // OPERATION QUEUED`", "cyan")
+    field(e, "Operation ID", f"`{job_id.upper()}`")
+    field(e, "Target", f"`{ip}`")
+    field(e, "Platform", f"`{platform.value.upper()}`")
+    field(e, "Runner State", "`AWAITING EXECUTION`", False)
     if notes:
-        e.add_field(name="Notes", value="*(credentials supplied)*")
+        field(e, "Operator Input", "`SUPPLIED // REDACTED`", False)
     await interaction.response.send_message(embed=e)
 
 
@@ -180,20 +200,20 @@ async def htb(
 async def status(interaction: discord.Interaction, job_id: str):
     j = jobs.get(job_id)
     if not j:
-        await interaction.response.send_message(embed=err("Job not found."))
+        await interaction.response.send_message(embed=err("OPERATION ID NOT FOUND.", "OPERATION LOOKUP"))
         return
     e = discord.Embed(title=f"Job `{j['id']}`", color=0x57F287)
     e.add_field(name="Target", value=f"`{j['ip']}` ({j['platform']})")
     e.add_field(name="Status", value=j["status"])
     flags = ", ".join(decoded_flags(j)) or "none"
-    e.add_field(name="Flags", value=f"`{flags}`")
+    field(e, "Artifacts", f"`{flags}`", False)
     await interaction.response.send_message(embed=e)
 
 
 @tree.command(name="cancel", description="Cancel a running/queued job")
 async def cancel(interaction: discord.Interaction, job_id: str):
     if not jobs.get(job_id):
-        await interaction.response.send_message(embed=err("Job not found."))
+        await interaction.response.send_message(embed=err("OPERATION ID NOT FOUND.", "OPERATION LOOKUP"))
         return
     jobs.update(job_id, status="cancelled")
     await interaction.response.send_message(f"🛑 Job `{job_id}` cancelled.")
@@ -227,7 +247,7 @@ async def deny(interaction: discord.Interaction, job_id: str):
 async def results(interaction: discord.Interaction, job_id: str):
     j = jobs.get(job_id)
     if not j:
-        await interaction.response.send_message(embed=err("Job not found."))
+        await interaction.response.send_message(embed=err("OPERATION ID NOT FOUND.", "OPERATION LOOKUP"))
         return
     flags = ", ".join(decoded_flags(j)) or "none retrieved"
     evidence_tail = Evidence(job_id).tail(15)
