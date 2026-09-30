@@ -11,6 +11,7 @@ RUN apt-get update \
         dirb \
         wordlists \
         ca-certificates \
+    && test -s /usr/share/wordlists/dirb/common.txt \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
