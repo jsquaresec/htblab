@@ -119,7 +119,13 @@ def process(job):
                 continue
         ctx = build_ctx(job, ",".join(map(str, ports)))
         rc, out = run_cmd(a["build"](ip, ctx), ev)
-        webhook(f"✅ Job `{jid}`: {a['desc']} finished (exit {rc})")
+        result_icon = "✅" if rc == 0 else "⚠️"
+        summary = out.strip() or "(no stdout/stderr returned)"
+        webhook(
+            f"{result_icon} Job `{jid}`: {a['desc']} finished (exit {rc})",
+            embed=embed(f"{a['desc']} // exit {rc}", summary,
+                        0x57F287 if rc == 0 else 0xFEE75C),
+        )
         if a.get("flag_check"):
             flags += [f for f in detect_flags(out) if f not in flags]
             if flags:
