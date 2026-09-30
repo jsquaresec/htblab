@@ -108,25 +108,19 @@ def vpn_embed(action, result):
     interface, vpn_ip = htb_vpn_interface()
     state = result.get("state", "unknown")
     connected = bool(vpn_ip) and state == "active"
-    color = 0x57F287 if connected else (0xFEE75C if state in {"activating", "deactivating"} else 0xED4245)
-    icon = "🟢" if connected else ("🟡" if color == 0xFEE75C else "🔴")
-
-    e = discord.Embed(
-        title="J2SEC // HTB VPN // TUNNEL CONTROL",
-        description=f"{icon} **{state.replace('_', ' ').title()}**",
-        color=color,
-    )
-    e.add_field(name="Service", value=f"`{state}`", inline=True)
-    e.add_field(name="Interface", value=f"`{interface or '—'}`", inline=True)
-    e.add_field(name="VPN IP", value=f"`{vpn_ip or '—'}`", inline=True)
+    transitioning = state in {"activating", "deactivating"}
+    color = "green" if connected else ("amber" if transitioning else "red")
+    signal = "● SECURE TUNNEL ESTABLISHED" if connected else ("◈ TUNNEL STATE TRANSITION" if transitioning else "○ SECURE TUNNEL OFFLINE")
+    e = sec_embed("HTB VPN // TUNNEL CONTROL", f"**{signal}**", color)
+    field(e, "Service", f"`{status_label(state)}`")
+    field(e, "Interface", f"`{interface or 'N/A'}`")
+    field(e, "VPN Address", f"`{vpn_ip or 'N/A'}`")
     if action != "status":
-        e.add_field(name="Action", value=f"`{action}`", inline=True)
+        field(e, "Control Action", f"`{action.upper()}`", False)
     message = result.get("message")
     if message and not result.get("ok"):
-        e.add_field(name="Details", value=message[:1000], inline=False)
-    e.set_footer(text="J2Sec's HTB Toolkit • Host-managed OpenVPN")
+        field(e, "Diagnostic", f"```\n{message[:900]}\n```", False)
     return e
-
 
 @tree.command(name="vpn", description="Manage the HTB VPN connection")
 @app_commands.describe(action="VPN action to perform")
@@ -202,13 +196,13 @@ async def status(interaction: discord.Interaction, job_id: str):
     if not j:
         await interaction.response.send_message(embed=err("OPERATION ID NOT FOUND.", "OPERATION LOOKUP"))
         return
-    e = discord.Embed(title=f"Job `{j['id']}`", color=0x57F287)
-    e.add_field(name="Target", value=f"`{j['ip']}` ({j['platform']})")
-    e.add_field(name="Status", value=j["status"])
-    flags = ", ".join(decoded_flags(j)) or "none"
-    field(e, "Artifacts", f"`{flags}`", False)
+    flags = decoded_flags(j)
+    e = sec_embed("OPERATION STATUS", f"`OPS::{j['id'].upper()}`", "cyan")
+    field(e, "Target", f"`{j['ip']}`")
+    field(e, "Platform", f"`{j['platform'].upper()}`")
+    field(e, "State", f"`{status_label(j['status'])}`")
+    field(e, "Artifacts", f"`{len(flags)} FLAG(S) ACQUIRED`" if flags else "`NO FLAGS RECORDED`", False)
     await interaction.response.send_message(embed=e)
-
 
 @tree.command(name="cancel", description="Cancel a running/queued job")
 async def cancel(interaction: discord.Interaction, job_id: str):
@@ -276,15 +270,11 @@ async def results(interaction: discord.Interaction, job_id: str):
 
 @tree.command(name="jobs", description="List recent jobs")
 async def list_jobs(interaction: discord.Interaction):
-    lines = [f"`{j['id']}`  {j['ip']:<16} {j['status']}" for j in jobs.recent()]
-    await interaction.response.send_message(
-        embed=discord.Embed(
-            title="Recent jobs",
-            description="\n".join(lines) or "none",
-            color=0x5865F2,
-        )
-    )
-
+    rows = jobs.recent()
+    lines = [f"`{j['id'].upper()}`  **{status_label(j['status'])}**\n└ `{j['ip']} // {j['platform'].upper()}`" for j in rows]
+    e = sec_embed("OPERATIONS QUEUE", "\n\n".join(lines) if lines else "`NO OPERATIONS IN QUEUE`", "cyan")
+    field(e, "Telemetry", f"`{len(rows)} RECENT OPERATION(S)`", False)
+    await interaction.response.send_message(embed=e)
 
 @client.event
 async def on_ready():
