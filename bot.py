@@ -120,7 +120,7 @@ def vpn_embed(action, result):
 ])
 async def vpn(
     interaction: discord.Interaction,
-    action: app_commands.Choice[str] | None = None,
+    action: app_commands.Choice[str] = None,
 ):
     selected = action.value if action else "status"
 
